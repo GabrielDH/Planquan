@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard, FileText, Ruler, Calculator, DollarSign,
-  ClipboardList, Brain, LogOut, User, TriangleRight, Settings,
+  ClipboardList, Brain, LogOut, User, TriangleRight, Settings, BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Proyectos', icon: <LayoutDashboard className="h-4 w-4" />, href: '/' },
+  { label: 'Catálogo', icon: <BookOpen className="h-4 w-4" />, href: '/catalog' },
   { label: 'Takeoff', icon: <ClipboardList className="h-4 w-4" />, disabled: true },
   { label: 'Cómputos', icon: <Calculator className="h-4 w-4" />, disabled: true },
   { label: 'Presupuesto', icon: <DollarSign className="h-4 w-4" />, disabled: true },

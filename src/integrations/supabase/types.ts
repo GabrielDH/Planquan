@@ -14,6 +14,184 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalog_categories: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          parent_id: string | null
+          sort_order: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          parent_id?: string | null
+          sort_order?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          parent_id?: string | null
+          sort_order?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalog_items: {
+        Row: {
+          id: string
+          user_id: string
+          code: string | null
+          name: string
+          category_id: string | null
+          unit_of_measure: string
+          unit_price: number
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          code?: string | null
+          name: string
+          category_id?: string | null
+          unit_of_measure: string
+          unit_price?: number
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          code?: string | null
+          name?: string
+          category_id?: string | null
+          unit_of_measure?: string
+          unit_price?: number
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      derived_measurements: {
+        Row: {
+          id: string
+          source_measurement_id: string
+          derived_measurement_id: string
+          action_type: string
+          parameters: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          source_measurement_id: string
+          derived_measurement_id: string
+          action_type: string
+          parameters?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          source_measurement_id?: string
+          derived_measurement_id?: string
+          action_type?: string
+          parameters?: Json
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "derived_measurements_source_measurement_id_fkey"
+            columns: ["source_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "derived_measurements_derived_measurement_id_fkey"
+            columns: ["derived_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "measurements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_item_assignments: {
+        Row: {
+          id: string
+          measurement_id: string
+          catalog_item_id: string
+          conversion_factor: number
+          quantity: number | null
+          estimated_cost: number | null
+          waste_factor: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          measurement_id: string
+          catalog_item_id: string
+          conversion_factor?: number
+          quantity?: number | null
+          estimated_cost?: number | null
+          waste_factor?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          measurement_id?: string
+          catalog_item_id?: string
+          conversion_factor?: number
+          quantity?: number | null
+          estimated_cost?: number | null
+          waste_factor?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_item_assignments_measurement_id_fkey"
+            columns: ["measurement_id"]
+            isOneToOne: false
+            referencedRelation: "measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_item_assignments_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurements: {
         Row: {
           color: string | null
@@ -254,8 +432,11 @@ export type Database = {
       }
       projects: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           currency: string
+          force_approved: boolean | null
           id: string
           levels: number | null
           location: string | null
@@ -274,8 +455,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           currency?: string
+          force_approved?: boolean | null
           id?: string
           levels?: number | null
           location?: string | null
@@ -294,8 +478,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           currency?: string
+          force_approved?: boolean | null
           id?: string
           levels?: number | null
           location?: string | null
@@ -314,6 +501,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      quality_gate_results: {
+        Row: {
+          id: string
+          project_id: string
+          executed_by: string
+          passed: boolean
+          results: Json
+          force_approved: boolean | null
+          force_comment: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          executed_by: string
+          passed: boolean
+          results?: Json
+          force_approved?: boolean | null
+          force_comment?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          executed_by?: string
+          passed?: boolean
+          results?: Json
+          force_approved?: boolean | null
+          force_comment?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_gate_results_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

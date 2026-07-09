@@ -10,8 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import {
-  ArrowLeft, Upload, FileText, Image, Eye, Trash2, Download,
+  ArrowLeft, Upload, FileText, Image, Eye, Trash2, Download, ShieldCheck,
 } from 'lucide-react';
+import QualityGateDialog from '@/components/quality/QualityGateDialog';
 import * as pdfjsLib from 'pdfjs-dist';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -32,6 +33,7 @@ export default function ProjectDetail() {
   const [files, setFiles] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState('Architectural');
+  const [showQualityGate, setShowQualityGate] = useState(false);
 
   const loadProject = useCallback(async () => {
     if (!projectId) return;
@@ -140,6 +142,10 @@ export default function ProjectDetail() {
                 </p>
               </div>
               <Badge>{STATUS_MAP[project.status] || project.status}</Badge>
+              <Button variant="outline" size="sm" className="ml-2" onClick={() => setShowQualityGate(true)}>
+                <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                Calidad
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
@@ -223,6 +229,15 @@ export default function ProjectDetail() {
           ))
         )}
       </div>
+
+      {projectId && (
+        <QualityGateDialog
+          open={showQualityGate}
+          onClose={() => setShowQualityGate(false)}
+          projectId={projectId}
+          onApproved={loadProject}
+        />
+      )}
     </AppLayout>
   );
 }

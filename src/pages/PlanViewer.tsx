@@ -7,11 +7,14 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Point, MeasurementTool, MeasurementData, ScaleData, MEASUREMENT_COLORS } from '@/types/viewer';
 import { realDistance, polylineLength, polygonArea, getAreaUnit as getAreaUnitFn } from '@/lib/measurements';
-import { exportToPDF, exportToCSV } from '@/lib/export-utils';
+import { exportToPDF, exportToCSV, exportToVisualPDF } from '@/lib/export-utils';
+import { useViewerTransform } from '@/hooks/useViewerTransform';
+import { UnitSystem } from '@/lib/unit-conversion';
 import ViewerCanvas from '@/components/viewer/ViewerCanvas';
 import MeasurementToolbar from '@/components/viewer/MeasurementToolbar';
 import ScaleCalibrationDialog from '@/components/viewer/ScaleCalibrationDialog';
 import ExportDialog from '@/components/export/ExportDialog';
+import PageThumbnails from '@/components/viewer/PageThumbnails';
 
 export default function PlanViewer() {
   const { projectId, fileId } = useParams<{ projectId: string; fileId: string }>();
@@ -22,7 +25,7 @@ export default function PlanViewer() {
   const [project, setProject] = useState<any>(null);
   const [file, setFile] = useState<any>(null);
   const [fileUrl, setFileUrl] = useState('');
-  const [zoom, setZoom] = useState(0.5);
+  const { zoom, setZoom, rotation, rotateCW, rotateCCW, resetRotation, zoomIn, zoomOut, zoomReset } = useViewerTransform(0.5);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [activeTool, setActiveTool] = useState<MeasurementTool>('none');
@@ -34,10 +37,31 @@ export default function PlanViewer() {
   const [showCalibration, setShowCalibration] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [calibrationPoints, setCalibrationPoints] = useState<Point[]>([]);
+  const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const [calibratedPages, setCalibratedPages] = useState<Set<number>>(new Set());
+  const [displayUnitSystem, setDisplayUnitSystem] = useState<UnitSystem>('imperial');
 
   // Undo/Redo
   const [undoStack, setUndoStack] = useState<MeasurementData[][]>([]);
   const [redoStack, setRedoStack] = useState<MeasurementData[][]>([]);
+
+  // Load user unit preference
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('profiles').select('preferred_units').eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => {
+        if (data?.preferred_units) {
+          setDisplayUnitSystem(data.preferred_units === 'metric' ? 'metric' : 'imperial');
+        }
+      });
+  }, [user]);
+
+  const handleUnitSystemChange = useCallback((system: UnitSystem) => {
+    setDisplayUnitSystem(system);
+    if (user) {
+      supabase.from('profiles').update({ preferred_units: system }).eq('user_id', user.id);
+    }
+  }, [user]);
 
   // Load project + file
   useEffect(() => {
@@ -61,6 +85,15 @@ export default function PlanViewer() {
     supabase.from('measurements').select('*').eq('file_id', fileId).eq('page_number', currentPage).order('created_at')
       .then(({ data }) => setMeasurements((data as any[]) || []));
   }, [fileId, currentPage]);
+
+  // Load all calibrated pages for thumbnail indicators
+  useEffect(() => {
+    if (!fileId) return;
+    supabase.from('page_scales').select('page_number').eq('file_id', fileId)
+      .then(({ data }) => {
+        if (data) setCalibratedPages(new Set(data.map((d: any) => d.page_number)));
+      });
+  }, [fileId, scale]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -216,6 +249,17 @@ export default function PlanViewer() {
     exportToCSV(exportData, project);
   };
 
+  const handleExportVisualPDF = () => {
+    if (!project) return;
+    const exportData = measurements.map(m => ({
+      ...m,
+      file_name: file?.original_file_name || '',
+      coordinates: m.coordinates as { x: number; y: number }[],
+      color: m.color,
+    }));
+    exportToVisualPDF({ pdfDoc, measurements: exportData, project });
+  };
+
   if (!file || !fileUrl) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
@@ -245,13 +289,22 @@ export default function PlanViewer() {
 
       {/* Viewer + Toolbar */}
       <div className="flex flex-1 overflow-hidden">
+        <PageThumbnails
+          pdfDoc={pdfDoc}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          calibratedPages={calibratedPages}
+        />
         <ViewerCanvas
           fileUrl={fileUrl}
           fileType={file.file_type}
           currentPage={currentPage}
           totalPages={totalPages}
-          onTotalPagesChange={setTotalPages}
+          onTotalPagesChange={(n) => { setTotalPages(n); }}
           zoom={zoom}
+          onZoomChange={setZoom}
+          rotation={rotation}
           activeTool={activeTool}
           measurements={measurements}
           currentPoints={currentPoints}
@@ -262,14 +315,15 @@ export default function PlanViewer() {
           scaleUnit={scale?.unit || 'ft'}
           mousePos={mousePos}
           onMousePosChange={setMousePos}
+          onPdfDocLoad={setPdfDoc}
         />
         <MeasurementToolbar
           activeTool={activeTool}
           onToolChange={handleToolChange}
           zoom={zoom}
-          onZoomIn={() => setZoom(z => Math.min(5, z * 1.2))}
-          onZoomOut={() => setZoom(z => Math.max(0.1, z / 1.2))}
-          onZoomReset={() => setZoom(0.5)}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          onZoomReset={zoomReset}
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
@@ -282,6 +336,12 @@ export default function PlanViewer() {
           canUndo={undoStack.length > 0}
           canRedo={redoStack.length > 0}
           onExport={() => setShowExport(true)}
+          rotation={rotation}
+          onRotateCW={rotateCW}
+          onRotateCCW={rotateCCW}
+          onRotateReset={resetRotation}
+          displayUnitSystem={displayUnitSystem}
+          onUnitSystemChange={handleUnitSystemChange}
         />
       </div>
 
@@ -298,6 +358,7 @@ export default function PlanViewer() {
         onClose={() => setShowExport(false)}
         onExportPDF={handleExportPDF}
         onExportCSV={handleExportCSV}
+        onExportVisualPDF={handleExportVisualPDF}
         measurementCount={measurements.length}
       />
     </div>

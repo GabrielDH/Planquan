@@ -13,6 +13,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
 
 const PlanViewer = lazy(() => import("./pages/PlanViewer"));
+const CatalogManager = lazy(() => import("./pages/CatalogManager"));
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/projects/new" element={<ProtectedRoute><ProjectNew /></ProtectedRoute>} />
               <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
               <Route path="/projects/:projectId/viewer/:fileId" element={<ProtectedRoute><PlanViewer /></ProtectedRoute>} />
+              <Route path="/catalog" element={<ProtectedRoute><CatalogManager /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

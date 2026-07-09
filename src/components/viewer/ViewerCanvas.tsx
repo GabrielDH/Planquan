@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { Point, MeasurementTool, MeasurementData, MEASUREMENT_COLORS } from '@/types/viewer';
 import { pointDistance, snapToPoint, formatMeasurement } from '@/lib/measurements';
+import { screenToPage } from '@/hooks/useViewerTransform';
 import { cn } from '@/lib/utils';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -15,6 +16,8 @@ interface Props {
   totalPages: number;
   onTotalPagesChange: (n: number) => void;
   zoom: number;
+  onZoomChange?: (zoom: number) => void;
+  rotation?: number;
   activeTool: MeasurementTool;
   measurements: MeasurementData[];
   currentPoints: Point[];
@@ -25,13 +28,14 @@ interface Props {
   scaleUnit: string;
   mousePos: Point | null;
   onMousePosChange: (p: Point | null) => void;
+  onPdfDocLoad?: (doc: any) => void;
 }
 
 export default function ViewerCanvas({
   fileUrl, fileType, currentPage, totalPages, onTotalPagesChange,
-  zoom, activeTool, measurements, currentPoints, onAddPoint,
+  zoom, onZoomChange, rotation = 0, activeTool, measurements, currentPoints, onAddPoint,
   onFinishMeasurement, snapEnabled, pixelsPerUnit, scaleUnit,
-  mousePos, onMousePosChange,
+  mousePos, onMousePosChange, onPdfDocLoad,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -47,6 +51,7 @@ export default function ViewerCanvas({
       if (cancelled) return;
       setPdfDoc(doc);
       onTotalPagesChange(doc.numPages);
+      onPdfDocLoad?.(doc);
     }).catch(console.error);
     return () => { cancelled = true; };
   }, [fileUrl, fileType]);
@@ -90,8 +95,9 @@ export default function ViewerCanvas({
     const rect = svg.getBoundingClientRect();
     const x = (e.clientX - rect.left) * (canvasSize.width / rect.width);
     const y = (e.clientY - rect.top) * (canvasSize.height / rect.height);
-    return { x, y };
-  }, [canvasSize]);
+    // Apply inverse rotation to get page-space coordinates
+    return screenToPage({ x, y }, rotation, canvasSize);
+  }, [canvasSize, rotation]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     if (activeTool === 'none') return;
@@ -129,8 +135,29 @@ export default function ViewerCanvas({
   }, [activeTool, getPageCoords, snapEnabled, measurements, currentPoints, zoom, onMousePosChange]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
-    // Let parent handle zoom via the container's scroll
-  }, []);
+    if (!onZoomChange || !containerRef.current) return;
+    e.preventDefault();
+    const zoomFactor = e.deltaY > 0 ? 1 / 1.15 : 1.15;
+    const newZoom = Math.max(0.1, Math.min(30, zoom * zoomFactor));
+
+    const container = containerRef.current;
+    const rect = container.getBoundingClientRect();
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
+
+    // Adjust scroll to keep point under cursor stable
+    const scrollLeft = (container.scrollLeft + cursorX) * (newZoom / zoom) - cursorX;
+    const scrollTop = (container.scrollTop + cursorY) * (newZoom / zoom) - cursorY;
+
+    onZoomChange(newZoom);
+
+    requestAnimationFrame(() => {
+      if (containerRef.current) {
+        containerRef.current.scrollLeft = scrollLeft;
+        containerRef.current.scrollTop = scrollTop;
+      }
+    });
+  }, [zoom, onZoomChange]);
 
   const cursorClass = activeTool !== 'none' ? 'viewer-cursor-crosshair' : 'viewer-cursor-grab';
 
@@ -138,8 +165,8 @@ export default function ViewerCanvas({
   const displayHeight = canvasSize.height * zoom;
 
   return (
-    <div ref={containerRef} className="flex-1 overflow-auto bg-muted/30 relative">
-      <div style={{ width: displayWidth, height: displayHeight, position: 'relative', margin: '20px auto' }}>
+    <div ref={containerRef} className="flex-1 overflow-auto bg-muted/30 relative" onWheel={handleWheel}>
+      <div style={{ width: displayWidth, height: displayHeight, position: 'relative', margin: '20px auto', transform: rotation ? `rotate(${rotation}deg)` : undefined, transformOrigin: 'center center' }}>
         <canvas
           ref={canvasRef}
           style={{ width: displayWidth, height: displayHeight, display: 'block' }}

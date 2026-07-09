@@ -1,16 +1,17 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { FileText, Table } from 'lucide-react';
+import { FileText, Table, Image } from 'lucide-react';
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onExportPDF: () => void;
   onExportCSV: () => void;
+  onExportVisualPDF?: () => void;
   measurementCount: number;
 }
 
-export default function ExportDialog({ open, onClose, onExportPDF, onExportCSV, measurementCount }: Props) {
+export default function ExportDialog({ open, onClose, onExportPDF, onExportCSV, onExportVisualPDF, measurementCount }: Props) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-sm">
@@ -28,6 +29,15 @@ export default function ExportDialog({ open, onClose, onExportPDF, onExportCSV, 
               <div className="text-xs text-muted-foreground">Reporte con tabla de mediciones</div>
             </div>
           </Button>
+          {onExportVisualPDF && (
+            <Button variant="outline" className="w-full justify-start h-12" onClick={() => { onExportVisualPDF(); onClose(); }}>
+              <Image className="mr-3 h-5 w-5 text-primary" />
+              <div className="text-left">
+                <div className="text-sm font-medium">PDF con evidencia visual</div>
+                <div className="text-xs text-muted-foreground">Incluye capturas del plano por medición</div>
+              </div>
+            </Button>
+          )}
           <Button variant="outline" className="w-full justify-start h-12" onClick={() => { onExportCSV(); onClose(); }}>
             <Table className="mr-3 h-5 w-5 text-success" />
             <div className="text-left">

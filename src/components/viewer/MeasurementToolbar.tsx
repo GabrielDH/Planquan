@@ -4,11 +4,12 @@ import { Separator } from '@/components/ui/separator';
 import {
   Ruler, Spline, Pentagon, MousePointerClick, MessageSquare,
   Target, ZoomIn, ZoomOut, RotateCcw, Magnet, Undo2, Redo2,
-  ChevronLeft, ChevronRight, Download
+  ChevronLeft, ChevronRight, Download, RotateCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MeasurementTool, MeasurementData, ScaleData } from '@/types/viewer';
 import { formatMeasurement } from '@/lib/measurements';
+import { UnitSystem, formatWithUnit } from '@/lib/unit-conversion';
 
 interface Props {
   activeTool: MeasurementTool;
@@ -29,6 +30,12 @@ interface Props {
   canUndo: boolean;
   canRedo: boolean;
   onExport: () => void;
+  rotation?: number;
+  onRotateCW?: () => void;
+  onRotateCCW?: () => void;
+  onRotateReset?: () => void;
+  displayUnitSystem?: UnitSystem;
+  onUnitSystemChange?: (system: UnitSystem) => void;
 }
 
 const tools: { tool: MeasurementTool; icon: React.ReactNode; label: string; requiresScale: boolean }[] = [
@@ -44,6 +51,8 @@ export default function MeasurementToolbar({
   activeTool, onToolChange, zoom, onZoomIn, onZoomOut, onZoomReset,
   currentPage, totalPages, onPageChange, scale, measurements,
   snapEnabled, onSnapToggle, onUndo, onRedo, canUndo, canRedo, onExport,
+  rotation = 0, onRotateCW, onRotateCCW, onRotateReset,
+  displayUnitSystem = 'imperial', onUnitSystemChange,
 }: Props) {
   return (
     <div className="flex flex-col w-56 bg-card border-l overflow-y-auto">
@@ -56,6 +65,17 @@ export default function MeasurementToolbar({
           <Button variant="outline" size="icon" className="h-7 w-7" onClick={onZoomIn}><ZoomIn className="h-3.5 w-3.5" /></Button>
           <Button variant="outline" size="icon" className="h-7 w-7" onClick={onZoomReset}><RotateCcw className="h-3.5 w-3.5" /></Button>
         </div>
+        {/* Rotation */}
+        {onRotateCW && onRotateCCW && onRotateReset && (
+          <div className="flex items-center gap-1 mt-2">
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={onRotateCCW} title="Rotar -90°"><RotateCcw className="h-3.5 w-3.5" /></Button>
+            <span className="text-xs font-mono flex-1 text-center">{rotation}°</span>
+            <Button variant="outline" size="icon" className="h-7 w-7" onClick={onRotateCW} title="Rotar +90°"><RotateCw className="h-3.5 w-3.5" /></Button>
+            {rotation !== 0 && (
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onRotateReset}>0°</Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Pages */}
@@ -121,6 +141,31 @@ export default function MeasurementToolbar({
         </div>
       </div>
 
+      {/* Unit System Toggle */}
+      {onUnitSystemChange && (
+        <div className="p-3 border-b">
+          <p className="text-xs font-medium text-muted-foreground mb-2">Unidades</p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant={displayUnitSystem === 'imperial' ? 'default' : 'outline'}
+              size="sm"
+              className="h-7 text-xs flex-1"
+              onClick={() => onUnitSystemChange('imperial')}
+            >
+              Imperial
+            </Button>
+            <Button
+              variant={displayUnitSystem === 'metric' ? 'default' : 'outline'}
+              size="sm"
+              className="h-7 text-xs flex-1"
+              onClick={() => onUnitSystemChange('metric')}
+            >
+              Métrico
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Measurements List */}
       <div className="p-3 flex-1">
         <div className="flex items-center justify-between mb-2">
@@ -138,7 +183,7 @@ export default function MeasurementToolbar({
               <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
               <span className="truncate flex-1">
                 {m.label || m.measurement_type}
-                {m.value != null && m.unit && `: ${formatMeasurement(m.value, m.unit)}`}
+                {m.value != null && m.unit && `: ${formatWithUnit(m.value, m.unit, displayUnitSystem)}`}
               </span>
             </div>
           ))}

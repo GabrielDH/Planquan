@@ -15,6 +15,8 @@ import MeasurementToolbar from '@/components/viewer/MeasurementToolbar';
 import ScaleCalibrationDialog from '@/components/viewer/ScaleCalibrationDialog';
 import ExportDialog from '@/components/export/ExportDialog';
 import PageThumbnails from '@/components/viewer/PageThumbnails';
+import ItemAssignmentDialog from '@/components/viewer/ItemAssignmentDialog';
+import QuickActionsPanel from '@/components/viewer/QuickActionsPanel';
 
 export default function PlanViewer() {
   const { projectId, fileId } = useParams<{ projectId: string; fileId: string }>();
@@ -40,6 +42,9 @@ export default function PlanViewer() {
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [calibratedPages, setCalibratedPages] = useState<Set<number>>(new Set());
   const [displayUnitSystem, setDisplayUnitSystem] = useState<UnitSystem>('imperial');
+  const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementData | null>(null);
+  const [showItemAssignment, setShowItemAssignment] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(false);
 
   // Undo/Redo
   const [undoStack, setUndoStack] = useState<MeasurementData[][]>([]);
@@ -342,6 +347,11 @@ export default function PlanViewer() {
           onRotateReset={resetRotation}
           displayUnitSystem={displayUnitSystem}
           onUnitSystemChange={handleUnitSystemChange}
+          onMeasurementAction={(m, action) => {
+            setSelectedMeasurement(m);
+            if (action === 'assign') setShowItemAssignment(true);
+            if (action === 'quick') setShowQuickActions(true);
+          }}
         />
       </div>
 
@@ -361,6 +371,22 @@ export default function PlanViewer() {
         onExportVisualPDF={handleExportVisualPDF}
         measurementCount={measurements.length}
       />
+
+      {selectedMeasurement && (
+        <>
+          <ItemAssignmentDialog
+            open={showItemAssignment}
+            onClose={() => { setShowItemAssignment(false); setSelectedMeasurement(null); }}
+            measurement={selectedMeasurement}
+          />
+          <QuickActionsPanel
+            open={showQuickActions}
+            onClose={() => { setShowQuickActions(false); setSelectedMeasurement(null); }}
+            measurement={selectedMeasurement}
+            onMeasurementCreated={(m) => setMeasurements(prev => [...prev, m])}
+          />
+        </>
+      )}
     </div>
   );
 }

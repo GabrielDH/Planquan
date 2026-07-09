@@ -4,7 +4,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   Ruler, Spline, Pentagon, MousePointerClick, MessageSquare,
   Target, ZoomIn, ZoomOut, RotateCcw, Magnet, Undo2, Redo2,
-  ChevronLeft, ChevronRight, Download, RotateCw
+  ChevronLeft, ChevronRight, Download, RotateCw, Tag, Calculator
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MeasurementTool, MeasurementData, ScaleData } from '@/types/viewer';
@@ -36,6 +36,7 @@ interface Props {
   onRotateReset?: () => void;
   displayUnitSystem?: UnitSystem;
   onUnitSystemChange?: (system: UnitSystem) => void;
+  onMeasurementAction?: (measurement: MeasurementData, action: 'assign' | 'quick') => void;
 }
 
 const tools: { tool: MeasurementTool; icon: React.ReactNode; label: string; requiresScale: boolean }[] = [
@@ -52,7 +53,7 @@ export default function MeasurementToolbar({
   currentPage, totalPages, onPageChange, scale, measurements,
   snapEnabled, onSnapToggle, onUndo, onRedo, canUndo, canRedo, onExport,
   rotation = 0, onRotateCW, onRotateCCW, onRotateReset,
-  displayUnitSystem = 'imperial', onUnitSystemChange,
+  displayUnitSystem = 'imperial', onUnitSystemChange, onMeasurementAction,
 }: Props) {
   return (
     <div className="flex flex-col w-56 bg-card border-l overflow-y-auto">
@@ -179,12 +180,32 @@ export default function MeasurementToolbar({
         </div>
         <div className="space-y-1">
           {measurements.slice(0, 50).map((m, i) => (
-            <div key={m.id} className="text-xs p-1.5 rounded bg-muted/50 flex items-center gap-1.5">
+            <div key={m.id} className="text-xs p-1.5 rounded bg-muted/50 flex items-center gap-1.5 group">
               <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
               <span className="truncate flex-1">
                 {m.label || m.measurement_type}
                 {m.value != null && m.unit && `: ${formatWithUnit(m.value, m.unit, displayUnitSystem)}`}
               </span>
+              {onMeasurementAction && m.value != null && (
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    className="p-0.5 rounded hover:bg-background"
+                    onClick={() => onMeasurementAction(m, 'assign')}
+                    title="Asignar ítem"
+                  >
+                    <Tag className="h-3 w-3" />
+                  </button>
+                  {(m.measurement_type === 'linear' || m.measurement_type === 'polyline' || m.measurement_type === 'area') && (
+                    <button
+                      className="p-0.5 rounded hover:bg-background"
+                      onClick={() => onMeasurementAction(m, 'quick')}
+                      title="Acción rápida"
+                    >
+                      <Calculator className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
